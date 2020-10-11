@@ -1,0 +1,72 @@
+from pyspark.sql import SparkSession
+#from pyspark import SparkContext
+
+APP_NAME = "DataFrames"
+SPARK_URL = "local[*]"
+
+spark = SparkSession.builder.appName(APP_NAME) \
+        .config('spark.ui.showConsoleProgress', 'false') \
+        .getOrCreate()
+
+taxi = spark.read.load('/datasets/pickups_terminal_5.csv', 
+                       format='csv', header='true', inferSchema='true')
+
+taxi = taxi.fillna(0)
+
+taxi.registerTempTable("taxi")
+
+print(spark.sql('SELECT hour, AVG(pickups) FROM taxi '
+                'GROUP BY hour ORDER BY AVG(pickups) DESC').show(10))
+               
+#Dataset.printSchema
+
+
+# sc – это существующий SparkContext.
+val sqlContext = new org.apache.spark.sql.hive.HiveContext(sc)
+
+sqlContext.sql("CREATE TABLE IF NOT EXISTS src (key INT, value STRING)")
+sqlContext.sql("LOAD DATA LOCAL INPATH 'examples/src/main/resources/kv1.txt' INTO TABLE src")
+
+# Запросы формулируются на HiveQL
+sqlContext.sql("FROM src SELECT key, value").collect().foreach(println)
+
+#поток в реал времени
+Spark Streaming
+
+#фильтрация твитов с упоминием землетрясений
+TwitterUtils.createStream(...)
+            .filter(_.getText.contains("earthquake") || _.getText.contains("shaking"))
+            
+// Готовим данные о твитах, касающихся землетрясения, и загружаем их в формате LIBSVM
+val data = MLUtils.loadLibSVMFile(sc, "sample_earthquate_tweets.txt")
+
+// Разбиваем данные на тренировочные (60%) и тестовые (40%).
+val splits = data.randomSplit(Array(0.6, 0.4), seed = 11L)
+val training = splits(0).cache()
+val test = splits(1)
+
+// Запускаем тренировочный алгоритм, чтобы построить модель
+val numIterations = 100
+val model = SVMWithSGD.train(training, numIterations)
+
+// Очищаем пороговое значение, заданное по умолчанию
+model.clearThreshold()
+
+// Вычисляем приблизительные показатели по тестовому множеству 
+val scoreAndLabels = test.map { point =>
+  val score = model.predict(point.features)
+  (score, point.label)
+}
+
+// Получаем параметры вычислений
+val metrics = new BinaryClassificationMetrics(scoreAndLabels)
+val auROC = metrics.areaUnderROC()
+
+println("Area under ROC = " + auROC)
+
+
+// sc – это имеющийся SparkContext.
+val sqlContext = new org.apache.spark.sql.hive.HiveContext(sc)
+// sendEmail – это пользовательскаяфункция
+sqlContext.sql("FROM earthquake_warning_users SELECT firstName, lastName, city, email")
+          .collect().foreach(sendEmail)
